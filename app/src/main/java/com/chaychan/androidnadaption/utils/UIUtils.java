@@ -7,7 +7,6 @@ import android.util.DisplayMetrics;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.ListView;
 import android.widget.Toast;
 
 import com.chaychan.androidnadaption.MyApplication;
@@ -15,8 +14,6 @@ import com.chaychan.androidnadaption.MyApplication;
 
 /**
  * 和ui相关的工具类
- *
- * @author Administrator
  */
 public class UIUtils {
 
@@ -228,30 +225,5 @@ public class UIUtils {
 
         //窗口的宽度
         return  dm.widthPixels;
-    }
-
-
-    /**判断listView是否到达顶部*/
-    public static boolean isListViewReachTopEdge(ListView listView) {
-        boolean result=false;
-        if(listView.getFirstVisiblePosition()==0){
-            View topChildView = listView.getChildAt(0);
-            if (topChildView != null){
-                result=topChildView.getTop()==0;
-            }else{
-                result = true;
-            }
-        }
-        return result ;
-    }
-
-    /**判断listView是否到达底部*/
-    public  static boolean isListViewReachBottomEdge(ListView listView) {
-        boolean result=false;
-        if (listView.getLastVisiblePosition() == (listView.getCount() - 1)) {
-            View bottomChildView = listView.getChildAt(listView.getLastVisiblePosition() - listView.getFirstVisiblePosition());
-            result= (listView.getHeight()>=bottomChildView.getBottom());
-        };
-        return  result;
     }
 }

@@ -20,7 +20,6 @@ import android.widget.ImageView;
 import com.chaychan.androidnadaption.listener.PermissionListener;
 import com.chaychan.androidnadaption.utils.FileUtils;
 import com.chaychan.androidnadaption.utils.ImageTools;
-import com.chaychan.androidnadaption.utils.LogUtils;
 import com.chaychan.androidnadaption.utils.UIUtils;
 
 import java.io.File;
@@ -29,16 +28,14 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final String TAG = MainActivity.class.getSimpleName();
-    private static final String FILE_PROVIDER_AUTHORITY = UIUtils.getPackageName() + ".fileprovider";
-
-    private static final int REQ_TAKE_PHOTO = 100;
-    private static final int REQ_ALBUM = 101;
-    private static final int REQ_ZOOM = 102;
-
     private PermissionListener permissionListener;
+
+    public static final int REQ_TAKE_PHOTO = 100;
+    public static final int REQ_ALBUM = 101;
+    public static final int REQ_ZOOM = 102;
+
     private Uri outputUri;
-    private String imgPath;//拍照完图片保存的路径
+    private String imgPath;
     private ImageView ivPhoto;
 
     @Override
@@ -49,38 +46,49 @@ public class MainActivity extends AppCompatActivity {
         ivPhoto = (ImageView) findViewById(R.id.iv_photo);
     }
 
+
     /**
-     * 拍照
+     * 拍照,使用存储卡路径（需要申请存储权限），即图片的路径在  存储卡目录下 -> 包名 -> icon文件夹下
      */
-    public void takePhoto(View view) {
+    public void takePhoto(View view){
+        imgPath =  FileUtils.generateImgePathInStoragePath();
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            //如果是6.0或6.0以上，则要申请运行时权限，这里需要申请拍照和写入SD卡的权限
-            requestRuntimePermission(new String[]{Manifest.permission.CAMERA,Manifest.permission.WRITE_EXTERNAL_STORAGE}, new PermissionListener() {
+            //如果是6.0或6.0以上，则要申请运行时权限,这里需要申请拍照的权限
+            requestRuntimePermission(new String[]{Manifest.permission.CAMERA,Manifest.permission.WRITE_EXTERNAL_STORAGE,Manifest.permission.READ_EXTERNAL_STORAGE}, new PermissionListener() {
                 @Override
                 public void onGranted() {
-                    openCamera();
+                    //开启摄像头，拍照完的图片保存在对应路径下
+                    openCamera(imgPath);
                 }
 
                 @Override
                 public void onDenied(List<String> deniedPermissions) {
-                    UIUtils.showToast("拍照权限被拒绝了");
+                    UIUtils.showToast("所需权限被拒绝");
                 }
             });
             return;
         }
 
-        openCamera();
+        openCamera(imgPath);
     }
 
-    private void openCamera() {
+    /**打开相册*/
+    public void openAlbum(View view){
+        Intent intent = new Intent(Intent.ACTION_PICK, null);
+        intent.setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                "image/*");
+        startActivityForResult(intent, REQ_ALBUM);
+    }
+
+    /**开启摄像机*/
+    private void openCamera(String imgPath) {
         // 指定调用相机拍照后照片的储存路径
-        imgPath = FileUtils.generateImgePath();
-        LogUtils.i(TAG,"拍照完图片的路径为：" + imgPath);
         File imgFile = new File(imgPath);
         Uri imgUri = null;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        if (Build.VERSION.SDK_INT >= 24) {
             //如果是7.0或以上
-            imgUri = FileProvider.getUriForFile(this, FILE_PROVIDER_AUTHORITY, imgFile);
+            imgUri = FileProvider.getUriForFile(this, UIUtils.getPackageName() + ".fileprovider", imgFile);
         } else {
             imgUri = Uri.fromFile(imgFile);
         }
@@ -90,20 +98,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * 打开相册
-     */
-    public void openAlbum(View view) {
-        Intent intent = new Intent(Intent.ACTION_PICK, null);
-        intent.setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                "image/*");
-        startActivityForResult(intent, REQ_ALBUM);
-    }
-
-    /**
      * 申请运行时权限
      */
-    public void requestRuntimePermission(String[] permissions, PermissionListener listener) {
-        permissionListener = listener;
+    public void requestRuntimePermission(String[] permissions, PermissionListener permissionListener) {
+        this.permissionListener = permissionListener;
         List<String> permissionList = new ArrayList<>();
         for (String permission : permissions) {
             if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
@@ -119,9 +117,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         switch (resultCode) {
             case RESULT_OK://调用图片选择处理成功
+                String zoomImgPath = "";
                 Bitmap bm = null;
                 File temFile = null;
                 File srcFile = null;
@@ -129,7 +129,7 @@ public class MainActivity extends AppCompatActivity {
                 switch (requestCode) {
                     case REQ_TAKE_PHOTO:// 拍照后在这里回调
                         srcFile = new File(imgPath);
-                        outPutFile = new File(FileUtils.generateImgePath());
+                        outPutFile = new File(FileUtils.generateImgePathInStoragePath());
                         outputUri = Uri.fromFile(outPutFile);
                         FileUtils.startPhotoZoom(this, srcFile, outPutFile, REQ_ZOOM);// 发起裁剪请求
                         break;
@@ -147,10 +147,10 @@ public class MainActivity extends AppCompatActivity {
                             // 将光标移至开头 ，这个很重要，不小心很容易引起越界
                             cursor.moveToFirst();
                             // 最后根据索引值获取图片路径
-                            String imgPath = cursor.getString(column_index);
+                            imgPath = cursor.getString(column_index);
 
                             srcFile = new File(imgPath);
-                            outPutFile = new File(FileUtils.generateImgePath());
+                            outPutFile = new File(FileUtils.generateImgePathInStoragePath());
                             outputUri = Uri.fromFile(outPutFile);
                             FileUtils.startPhotoZoom(this, srcFile, outPutFile, REQ_ZOOM);// 发起裁剪请求
                         }
@@ -168,10 +168,9 @@ public class MainActivity extends AppCompatActivity {
                                     temFile.delete();
                                 }
 
-                                String scaleImgPath = FileUtils.saveBitmapByQuality(bm, 80);//进行压缩
-                                LogUtils.i(TAG,"压缩后图片的路径为：" + scaleImgPath);
-                                //进行上传，上传成功后显示新图片,上传的逻辑就是将scaleImgPath这个路径下的图片上传，此处不做演示，这里只是显示到iv上
-                                ivPhoto.setImageBitmap(bm);
+                                String scaleImgPath = FileUtils.saveBitmapByQuality(bm, 80);//复制并压缩到自己的目录并压缩
+                                //进行上传，上传成功后显示新图片,这里不演示上传的逻辑，上传只需将scaleImgPath路径下的文件上传即可。
+                                ivPhoto.setImageBitmap(bm);//显示在iv上
                             }
                         } else {
                             UIUtils.showToast("选择图片发生错误，图片可能已经移位或删除");
@@ -181,7 +180,6 @@ public class MainActivity extends AppCompatActivity {
                 break;
         }
     }
-
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -206,4 +204,5 @@ public class MainActivity extends AppCompatActivity {
                 break;
         }
     }
+
 }

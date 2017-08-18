@@ -6,6 +6,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Process;
 
+
+
 public class MyApplication extends Application {
 
     private static final String TAG = MyApplication.class.getSimpleName() ;
@@ -35,6 +37,7 @@ public class MyApplication extends Application {
         return mHandler;
     }
 
+
     @Override
     public void onCreate() {// 程序的入口
 //        Thread.setDefaultUncaughtExceptionHandler(new MyHandler());//设置全局异常捕获器
@@ -56,10 +59,6 @@ public class MyApplication extends Application {
         mMainLooper = getMainLooper();
 
         mHandler = new Handler();
-
-        //在使用SDK各组件之前初始化context信息，传入ApplicationContext
-        //注意该方法要再setContentView方法之前实现
-//        SDKInitializer.initialize(getApplicationContext());
 
         super.onCreate();
     }

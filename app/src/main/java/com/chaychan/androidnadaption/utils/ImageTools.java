@@ -509,7 +509,7 @@ public final class ImageTools {
             image = File.createTempFile(
                     prefix, /* prefix */
                     ".jpg",         /* suffix */
-                    new File(FileUtils.getAppDir(FileUtils.ICON_DIR))     /* directory */
+                    new File(FileUtils.getDir(FileUtils.ICON_DIR))     /* directory */
             );
         } catch (IOException e) {
             e.printStackTrace();
